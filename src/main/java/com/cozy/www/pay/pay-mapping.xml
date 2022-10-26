@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PayDAO">
+<resultMap type="com.cozy.www.pay.PayVO" id="PayVO">
+		<id property="pay_no" column="PAY_NO" />		
+		<result property="uid" column="UID" />
+		<result property="uname" column="UNAME" />
+		<result property="uphone" column="UPHONE" />
+		<result property="no" column="NO" />
+		<result property="qty" column="QTY" />
+		<result property="total" column="TOTAL" />
+		<result property="postcode" column="POSTCODE"/>
+		<result property="roadaddr" column="ROADADDR"/>
+		<result property="jibunaddr" column="JIBUNADDR"/>
+		<result property="detailaddr" column="DETAILADDR"/>
+		<result property="extraaddr" column="EXTRAADDR"/>
+		<result property="pay_date" column="PAY_DATE"/>
+		<result property="state" column="STATE"/>
+		<result property="merchant_uid" column="MERCHANT_UID"/>
+		<result property="p_file" column="P_FILE"/>
+		<result property="thumbfile" column="THUMBFILE"/>
+		<result property="p_name" column="P_NAME"/>
+		<result property="p_price" column="P_PRICE"/>
+		<collection property="productVO" resultMap="ProductVO"/>
+</resultMap>
+<resultMap type="com.cozy.www.product.ProductVO" id="ProductVO">	
+		<id property="no" column="NO"/>
+		<result property="p_name" column="P_NAME"/>
+		<result property="div1" column="DIV1"/>
+		<result property="div2" column="DIV2"/>
+		<result property="p_file" column="P_FILE"/>
+		<result property="thumbfile" column="THUMBFILE"/>
+		<result property="price" column="PRICE"/>
+		<result property="text" column="TEXT"/>
+		<result property="date" column="DATE"/>
+</resultMap>
+	<select id="getOrderInfoUID" resultType="com.cozy.www.pay.PayVO" parameterType="HashMap">
+	select u.uid, u.uname, u.uphone, c.no, c.p_file, c.p_name ,c.qty, c.price, u.postcode, u.roadaddr, u.jibunaddr, u.detailaddr, u.extraaddr
+	from (select * from user where uid = #{uid}) u, (select * from cart where cart_num in 
+	<foreach collection="itemList" index="index" item="cart_num" open="(" close=")" separator=",">#{cart_num}</foreach>) c
+	</select>
+	<select id="getOrderInfoFID" resultType="com.cozy.www.pay.PayVO" parameterType="HashMap">
+	select uid, no, p_file, p_name ,qty, price 
+	from cart where cart_num in 
+	<foreach collection="itemList" index="index" item="cart_num" open="(" close=")" separator=",">#{cart_num}</foreach>
+	</select>
+	<insert id="insertOrderUID" parameterType="HashMap">
+	insert into pay(uid, uname, uphone, no, qty, total, postcode, roadaddr, jibunaddr, detailaddr, extraaddr, state, merchant_uid)
+	(select u.uid ,#{vo.uname},#{vo.uphone}, no, qty, price*qty, #{vo.postcode},#{vo.roadaddr},#{vo.jibunaddr},#{vo.detailaddr},#{vo.extraaddr},1,#{vo.merchant_uid}
+	from (select * from user where uid=#{uid}) u, (select * from cart where cart_num in
+	<foreach collection="itemList" index="index" item="cart_num" open="(" close=")" separator=",">#{cart_num}</foreach>
+	 ) c);
+	</insert>
+	<insert id="insertOrderFID" parameterType="HashMap">
+	insert into pay(uid, uname, uphone, no, qty, total, postcode, roadaddr, jibunaddr, detailaddr, extraaddr, state, merchant_uid)
+	(select uid,#{vo.uname},#{vo.uphone}, no, qty, price*qty, #{vo.postcode},#{vo.roadaddr},#{vo.jibunaddr},#{vo.detailaddr},#{vo.extraaddr},1,#{vo.merchant_uid}
+	from cart where cart_num in 
+	<foreach collection="itemList" index="index" item="cart_num" open="(" close=")" separator=",">#{cart_num}</foreach>)
+	</insert>
+	
+	<delete id="deleteCart">
+	delete from cart where cart_num in
+	<foreach collection='list' index='index' item='cart_num' open='(' close=')' separator=','>
+		#{cart_num}</foreach>
+	</delete>
+	<select id="getComplete" resultType="com.cozy.www.pay.PayVO">
+	select uid, uname, uphone, pay.no, thumbfile, p_name, price, pay.qty, total, postcode, roadaddr, jibunaddr, detailaddr, extraaddr, pay_date, merchant_uid, state
+	from pay join product on pay.no = product.no where merchant_uid = #{merchant_uid};
+	</select>
+	<select id="getPayCount" resultType="int">
+		select count(*) from
+		(select count(*) from pay
+		<if test="searchKeyword != null">
+		WHERE uid LIKE CONCAT('%',#{searchKeyword},'%')
+		or pay_no LIKE CONCAT('%',#{searchKeyword},'%')
+		or uname LIKE CONCAT('%',#{searchKeyword},'%')
+		</if>
+		group by MERCHANT_UID) as count;
+	</select>
+	<select id="getPayListPage" resultType="com.cozy.www.pay.PayVO">
+		SELECT PAY_NO, UID, UNAME, UPHONE, PAY.NO, P_FILE, P_NAME, PRICE, PAY.QTY, TOTAL, POSTCODE, ROADADDR, JIBUNADDR, DETAILADDR, EXTRAADDR, PAY_DATE, STATE, MERCHANT_UID
+		FROM PAY join PRODUCT on PAY.NO = PRODUCT.NO
+		<if test="searchKeyword != null">
+		WHERE UID LIKE CONCAT('%',#{searchKeyword},'%')
+		OR PAY_NO LIKE CONCAT('%',#{searchKeyword},'%')
+		OR UNAME LIKE CONCAT('%',#{searchKeyword},'%')
+		</if>
+		group by MERCHANT_UID
+		ORDER BY PAY_NO DESC LIMIT 6 OFFSET #{offset} 
+	</select>
+	<delete id="adminPayDelete">
+	delete from pay where merchant_uid in
+	<foreach collection='list' index='index' item='merchant_uid' open='(' close=')' separator=','>
+		#{merchant_uid}</foreach>
+	</delete>
+	<select id="adminPayUpdateForm" resultType="com.cozy.www.pay.PayVO">
+		SELECT * FROM PAY WHERE merchant_uid = #{merchant_uid}
+	</select>
+	<update id="adminPayUpdate">
+	update pay set uname = #{uname},uphone = #{uphone}, postcode = #{postcode},roadaddr = #{roadaddr},jibunaddr = #{jibunaddr},detailaddr = #{detailaddr},extraaddr = #{extraaddr}, pay_date = #{pay_date},state = #{state} where merchant_uid = #{merchant_uid}
+	</update>
+	<update id="adminUpdateCancel">
+	update pay set state = 5 where merchant_uid = #{merchant_uid}
+	</update>
+
+</mapper>

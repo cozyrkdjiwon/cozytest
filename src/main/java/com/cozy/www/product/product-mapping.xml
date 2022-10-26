@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ProductDAO">
+	<resultMap type="com.cozy.www.product.ProductVO" id="ProductResult">
+		<id property="no" column="NO"/>
+		<result property="p_name" column="P_NAME"/>
+		<result property="div1" column="DIV1"/>
+		<result property="div2" column="DIV2"/>
+		<result property="p_file" column="P_FILE"/>
+		<result property="thumbfile" column="THUMBFILE"/>
+		<result property="price" column="PRICE"/>
+		<result property="text" column="TEXT"/>
+		<result property="date" column="DATE"/>
+	</resultMap>
+	<select id="getDivCount" resultType="int">
+		SELECT count(*) FROM PRODUCT WHERE DIV1=#{div1}
+		<if test="searchKeyword != null">
+		and p_name LIKE CONCAT('%',#{searchKeyword},'%')
+		or div1 LIKE CONCAT('%',#{searchKeyword},'%')
+		or div2 LIKE CONCAT('%',#{searchKeyword},'%')
+		</if>
+	</select>
+	<select id="getDiv2Count" resultType="int">
+		SELECT count(*) FROM PRODUCT WHERE DIV1=#{div1} and div2=#{div2}
+	</select>
+	<select id="getSearchCount" resultType="int">
+		SELECT count(*) FROM PRODUCT
+		<if test="searchKeyword != null">
+		WHERE p_name LIKE CONCAT('%',#{searchKeyword},'%')
+		or div1 LIKE CONCAT('%',#{searchKeyword},'%')
+		or div2 LIKE CONCAT('%',#{searchKeyword},'%')
+		</if>
+	</select>
+	<select id="getProductListPage" resultMap="ProductResult">
+		SELECT * FROM PRODUCT WHERE DIV1=#{div1}
+		ORDER BY NO DESC LIMIT 6 OFFSET #{offset}
+	</select>
+	<select id="getBoardListDiv2" resultMap="ProductResult">
+		SELECT * FROM PRODUCT WHERE DIV1=#{div1} AND DIV2=#{div2}
+		ORDER BY NO DESC LIMIT 6 OFFSET #{offset}
+	</select>
+	<select id="getSearchList" resultMap="ProductResult">
+		SELECT * FROM PRODUCT
+		<if test="searchKeyword != null">
+		WHERE p_name LIKE CONCAT('%',#{searchKeyword},'%')
+		or div1 LIKE CONCAT('%',#{searchKeyword},'%')
+		or div2 LIKE CONCAT('%',#{searchKeyword},'%')
+		</if>
+		ORDER BY NO DESC LIMIT 6 OFFSET #{offset} 
+	</select>
+	<select id="getPayHot" resultType="com.cozy.www.product.ProductVO">
+		select product.no,product.p_name,product.thumbfile,product.price
+		from pay join product on product.no = pay.no group by no order by sum(qty) desc limit 4
+	</select>
+	<select id="getHealthy" resultType="com.cozy.www.product.ProductVO">
+		select product.no,product.p_name,product.thumbfile,product.price
+		from pay join product on product.no = pay.no where div1 = 'healthy'
+		group by no order by sum(qty) desc limit 4
+	</select>
+	<select id="getLowPrice" resultType="com.cozy.www.product.ProductVO">
+		select product.no,product.p_name,product.thumbfile,product.price
+		from pay join product on product.no = pay.no where price &lt;= 10000
+		group by no order by sum(qty) desc limit 4
+	</select>
+		
+	</mapper>
